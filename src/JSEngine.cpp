@@ -389,10 +389,15 @@ bool JSEngine::callGlobalImpl(const char* name, size_t argc, const std::function
         std::vector<JSValue> argv(argc);
         if (argc > 0) fillArgs(impl_->ctx, argv.data());
         JSValue result = JS_Call(impl_->ctx, func, global, (int)argc, argc ? argv.data() : nullptr);
-        if (JS_IsException(result)) impl_->dumpError();
-        else success = true;
+        if (JS_IsException(result)) {
+            impl_->dumpError();
+        } else {
+            success = true;
+        }
         JS_FreeValue(impl_->ctx, result);
         for (auto& v : argv) JS_FreeValue(impl_->ctx, v);
+
+        executePendingJobs();
     }
 
     JS_FreeValue(impl_->ctx, func);
@@ -442,6 +447,103 @@ JSEngine::CompileResult JSEngine::compile(const std::string& code, const std::st
 }
 
 JSContext* JSEngine::ctx() const { return impl_ ? impl_->ctx : nullptr; }
+
+// ---------------------------------------------------------------------------
+// Promise helpers
+// ---------------------------------------------------------------------------
+
+struct JSEngine::InternalPromise {
+    JSValue promise = JS_UNDEFINED;
+    JSValue resolve = JS_UNDEFINED;
+    JSValue reject  = JS_UNDEFINED;
+};
+
+void JSEngine::executePendingJobs() {
+    if (!impl_ || !impl_->rt) return;
+    JSContext* jobCtx = nullptr;
+    for (;;) {
+        int rc = JS_ExecutePendingJob(impl_->rt, &jobCtx);
+        if (rc <= 0) break;
+    }
+}
+
+JSEngine::PromiseHandle JSEngine::createPromise() {
+    if (!impl_ || !impl_->ctx) return {nullptr};
+    JSContext* c = impl_->ctx;
+
+    JSValue funcs[2];
+    JSValue promise = JS_NewPromiseCapability(c, funcs);
+    if (JS_IsException(promise)) {
+        impl_->dumpError();
+        return {nullptr};
+    }
+
+    auto* ip = new InternalPromise;
+    ip->promise = promise;            // takes initial ref
+    ip->resolve = funcs[0];
+    ip->reject  = funcs[1];
+    return {static_cast<void*>(ip)};
+}
+
+RawJSValue JSEngine::promiseValue(PromiseHandle h) const {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip) return {JS_UNDEFINED};
+    return {ip->promise};             // NOT DupValue'd – JSConv<RawJSValue>::to will Dup
+}
+
+void JSEngine::resolvePromise(PromiseHandle h, const std::string& data) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    JSValue arg = JS_NewString(c, data.c_str());
+    JSValue r = JS_Call(c, ip->resolve, JS_UNDEFINED, 1, &arg);
+    JS_FreeValue(c, arg);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
+void JSEngine::resolvePromiseVoid(PromiseHandle h) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    JSValue undef = JS_UNDEFINED;
+    JSValue r = JS_Call(c, ip->resolve, JS_UNDEFINED, 1, &undef);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
+void JSEngine::rejectPromise(PromiseHandle h, const std::string& error) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    JSValue errObj = JS_NewError(c);
+    JS_DefinePropertyValueStr(c, errObj, "message",
+        JS_NewString(c, error.c_str()), JS_PROP_C_W_E);
+    JSValue r = JS_Call(c, ip->reject, JS_UNDEFINED, 1, &errObj);
+    JS_FreeValue(c, errObj);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
+void JSEngine::freePromise(PromiseHandle h) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip) return;
+    if (impl_ && impl_->ctx) {
+        JS_FreeValue(impl_->ctx, ip->promise);
+        JS_FreeValue(impl_->ctx, ip->resolve);
+        JS_FreeValue(impl_->ctx, ip->reject);
+    }
+    delete ip;
+}
 
 } // namespace slowjs
 

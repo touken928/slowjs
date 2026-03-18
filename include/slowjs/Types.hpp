@@ -133,13 +133,25 @@ struct JSConv<std::vector<T>> {
     }
 };
 
+// Non-owning wrapper for returning a raw JSValue through FuncWrap.
+// The wrapped JSValue is DupValue'd on conversion; caller retains original ownership.
+struct RawJSValue {
+    JSValue val = JS_UNDEFINED;
+};
+
+template <> struct JSConv<RawJSValue> {
+    static JSValue to(JSContext* c, const RawJSValue& r) {
+        return JS_DupValue(c, r.val);
+    }
+};
+
 template <typename T> using decay_t = std::remove_cv_t<std::remove_reference_t<T>>;
 template <typename> struct dependent_false : std::false_type {};
 
 template <typename T>
 struct JSConv {
     static_assert(dependent_false<T>::value,
-        "JSConv<T> not specialized for this type. Supported: int, int64_t, double, float, bool, std::string, std::vector<T>");
+        "JSConv<T> not specialized for this type. Supported: int, int64_t, double, float, bool, std::string, std::vector<T>, RawJSValue");
 };
 
 } // namespace slowjs

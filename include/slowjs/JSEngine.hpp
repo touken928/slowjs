@@ -33,6 +33,15 @@ public:
     void installModules();
     void cleanup();
 
+    // Promise creation and lifecycle (for async C++ APIs).
+    struct PromiseHandle { void* ptr = nullptr; };
+    PromiseHandle createPromise();
+    RawJSValue    promiseValue(PromiseHandle h) const;
+    void          resolvePromise(PromiseHandle h, const std::string& data);
+    void          resolvePromiseVoid(PromiseHandle h);
+    void          rejectPromise(PromiseHandle h, const std::string& error);
+    void          freePromise(PromiseHandle h);
+
     // ---------------------------------------------------------------------
     // Host data access (embedding API)
     //
@@ -74,8 +83,10 @@ public:
 
 private:
     struct Impl;
+    struct InternalPromise;
     std::unique_ptr<Impl> impl_;
 
+    void executePendingJobs();
     bool callGlobalImpl(const char* name, size_t argc, const std::function<void(JSContext*, JSValue*)>& fillArgs);
     bool evalImpl(const std::string& virtualName, const std::string& code, int evalFlags);
 
