@@ -33,6 +33,26 @@ public:
     void installModules();
     void cleanup();
 
+    // ---------------------------------------------------------------------
+    // Host data access (embedding API)
+    //
+    // setHost<T> / host<T> store and retrieve a single pointer per C++ type T.
+    // Lifetime is managed by the host; slowjs never owns or frees these.
+    // ---------------------------------------------------------------------
+    template<typename T>
+    void setHost(T* ptr) {
+        setHostImpl(typeKey<T>(), static_cast<void*>(ptr));
+    }
+
+    template<typename T>
+    T* host() const {
+        return static_cast<T*>(hostImpl(typeKey<T>()));
+    }
+
+    // Backward-compatible raw pointer channel (maps to a dedicated slot).
+    void setHostData(void* ptr) { setHost<void>(ptr); }
+    void* hostData() const { return host<void>(); }
+
     bool runFile(const std::string& path);
     bool runModuleCode(const std::string& virtualName, const std::string& code);
     // Execute plain JS statements (global/script mode), not as an ES module.
@@ -58,6 +78,16 @@ private:
 
     bool callGlobalImpl(const char* name, size_t argc, const std::function<void(JSContext*, JSValue*)>& fillArgs);
     bool evalImpl(const std::string& virtualName, const std::string& code, int evalFlags);
+
+    // Internal helpers for type-based host storage.
+    using TypeKey = const void*;
+    template<typename T>
+    static TypeKey typeKey() {
+        static int dummy;
+        return &dummy;
+    }
+    void setHostImpl(TypeKey key, void* ptr);
+    void* hostImpl(TypeKey key) const;
 
     template <typename T, typename... Rest>
     static void convertArgs(JSContext* c, JSValue* argv, T first, Rest... rest) {

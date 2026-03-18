@@ -16,6 +16,9 @@ struct JSEngine::Impl {
     bool installed = false;
     bool cleanedUp = false;
 
+    // Type-keyed host storage: each C++ type T maps to a single void*.
+    std::unordered_map<JSEngine::TypeKey, void*> hostStorage;
+
     std::unordered_map<JSModuleDef*, JSModule*> modData;
     std::unordered_map<std::string, JSModuleDef*> jsModuleCache;
     std::function<void(const std::string&)> errorCallback;
@@ -305,6 +308,17 @@ void JSEngine::cleanup() {
         JS_FreeRuntime(impl_->rt);
         impl_->rt = nullptr;
     }
+}
+
+void JSEngine::setHostImpl(TypeKey key, void* ptr) {
+    if (!impl_) return;
+    impl_->hostStorage[key] = ptr;
+}
+
+void* JSEngine::hostImpl(TypeKey key) const {
+    if (!impl_) return nullptr;
+    auto it = impl_->hostStorage.find(key);
+    return it == impl_->hostStorage.end() ? nullptr : it->second;
 }
 
 bool JSEngine::runFile(const std::string& path) {

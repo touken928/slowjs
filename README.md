@@ -49,6 +49,36 @@ plugins.installAll(engine, engine.root());
 engine.runFile("main.js");
 ```
 
+### Host data (embedding native services)
+
+`slowjs` provides a small type-based host storage to pass native engine services
+into plugins and modules:
+
+```cpp
+slowjs::JSEngine engine;
+engine.initialize();
+
+// Expose a renderer (or any other native service) to plugins
+engine.setHost<render::IRenderer>(&renderer);
+
+// In a plugin:
+struct GraphicsPlugin : slowjs::IEnginePlugin {
+  const char* name() const override { return "graphics"; }
+
+  void install(slowjs::JSEngine& engine, slowjs::JSModule& root) override {
+    if (auto* renderer = engine.host<render::IRenderer>()) {
+      // Bind renderer into your own C++ facade and expose JS functions
+      // ...
+    }
+  }
+};
+```
+
+Each C++ type `T` maps to at most one pointer in `setHost<T>(T*)`, and
+`host<T>()` returns the same pointer (or `nullptr` if not registered). The
+stored pointer is never owned or freed by `slowjs`; its lifetime is managed by
+the embedding application.
+
 ## Build
 
 ```bash
