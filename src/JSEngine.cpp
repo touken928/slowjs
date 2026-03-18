@@ -317,9 +317,17 @@ bool JSEngine::runFile(const std::string& path) {
 }
 
 bool JSEngine::runModuleCode(const std::string& virtualName, const std::string& code) {
+    return evalImpl(virtualName, code, JS_EVAL_TYPE_MODULE);
+}
+
+bool JSEngine::eval(const std::string& virtualName, const std::string& code) {
+    return evalImpl(virtualName, code, JS_EVAL_TYPE_GLOBAL);
+}
+
+bool JSEngine::evalImpl(const std::string& virtualName, const std::string& code, int evalFlags) {
     if (!impl_->ctx || impl_->cleanedUp) return false;
     installModules();
-    JSValue r = JS_Eval(impl_->ctx, code.c_str(), code.size(), virtualName.c_str(), JS_EVAL_TYPE_MODULE);
+    JSValue r = JS_Eval(impl_->ctx, code.c_str(), code.size(), virtualName.c_str(), evalFlags);
     if (JS_IsException(r)) { impl_->dumpError(); JS_FreeValue(impl_->ctx, r); return false; }
     JS_FreeValue(impl_->ctx, r);
     return true;

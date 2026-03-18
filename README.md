@@ -7,6 +7,48 @@
 - Bytecode compile/execute helpers
 - Plugin-based module installation (`PluginRegistry`)
 
+## API quick glance
+
+### Create an engine, register native module, run a JS entry
+
+```cpp
+#include <slowjs/JSEngine.hpp>
+
+slowjs::JSEngine engine;
+engine.initialize();
+
+auto& root = engine.root();
+auto& math = root.module("math");
+math.func("add", [](int a, int b) { return a + b; });
+math.value("PI", 3.1415926);
+
+engine.runFile("main.js");
+engine.callGlobal("update", 0.016);
+```
+
+### Plugins
+
+```cpp
+#include <slowjs/JSEngine.hpp>
+#include <slowjs/Plugin.hpp>
+
+struct MyPlugin : slowjs::IEnginePlugin {
+  const char* name() const override { return "my_plugin"; }
+  void install(slowjs::JSEngine& engine, slowjs::JSModule& root) override {
+    (void)engine;
+    root.module("sys").value("version", std::string("1.0"));
+  }
+};
+
+slowjs::PluginRegistry plugins;
+plugins.add(std::make_unique<MyPlugin>());
+
+slowjs::JSEngine engine;
+engine.initialize();
+plugins.installAll(engine, engine.root());
+engine.runFile("main.js");
+```
+
 ## Build
 
 ```bash
