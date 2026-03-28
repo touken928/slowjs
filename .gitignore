@@ -1,0 +1,27 @@
+# Out-of-tree CMake build trees (standalone: cmake -B build, presets, etc.)
+build/
+cmake-build-*/
+out/
+
+# In-source configure leftovers (discouraged)
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

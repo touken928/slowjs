@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace slowjs {
+namespace qjs {
 
 class JSEngine;
 class JSModule;
@@ -39,5 +39,4 @@ private:
     std::unordered_map<std::string, PluginPtr> plugins_;
 };
 
-} // namespace slowjs
-
+} // namespace qjs

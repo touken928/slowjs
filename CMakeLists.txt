@@ -1,33 +1,30 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(slowjs LANGUAGES C CXX)
+project(qjs LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(SLOWJS_BUILD_SHARED "Build slowjs as shared library" OFF)
-
-set(BUILD_SHARED_LIBS ${SLOWJS_BUILD_SHARED})
-
-# ---------------------------------------------------------------------------
-# Dependencies
-# ---------------------------------------------------------------------------
-
 include(cmake/quickjs.cmake)
 
-# ---------------------------------------------------------------------------
-# slowjs library
-# ---------------------------------------------------------------------------
-
-add_library(slowjs STATIC
-    src/JSEngine.cpp
+add_library(qjs STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/js_engine.cc
 )
 
-target_include_directories(slowjs PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+target_include_directories(qjs PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
 )
 
-target_link_libraries(slowjs PUBLIC
-    quickjs
-)
+target_link_libraries(qjs PUBLIC quickjs)
 
+add_library(qjs::qjs ALIAS qjs)
+add_library(qjs::quickjs ALIAS quickjs)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    option(QJS_BUILD_TESTS "Build qjs unit tests (GoogleTest)" ON)
+else()
+    option(QJS_BUILD_TESTS "Build qjs unit tests (GoogleTest)" OFF)
+endif()
+if(QJS_BUILD_TESTS)
+    include(cmake/googletest.cmake)
+endif()

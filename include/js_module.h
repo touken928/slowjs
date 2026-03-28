@@ -1,5 +1,5 @@
 #pragma once
-#include <slowjs/Types.hpp>
+#include <js_types.h>
 
 #include <functional>
 #include <memory>
@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace slowjs {
+namespace qjs {
 
 struct FuncBase {
     virtual ~FuncBase() = default;
@@ -109,5 +109,4 @@ private:
     }
 };
 
-} // namespace slowjs
-
+} // namespace qjs

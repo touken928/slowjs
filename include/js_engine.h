@@ -1,5 +1,5 @@
 #pragma once
-#include <slowjs/Module.hpp>
+#include <js_module.h>
 
 #include <cstdint>
 #include <functional>
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace slowjs {
+namespace qjs {
 
 class JSEngine {
 public:
@@ -33,7 +33,6 @@ public:
     void installModules();
     void cleanup();
 
-    // Promise creation and lifecycle (for async C++ APIs).
     struct PromiseHandle { void* ptr = nullptr; };
     PromiseHandle createPromise();
     RawJSValue    promiseValue(PromiseHandle h) const;
@@ -42,12 +41,6 @@ public:
     void          rejectPromise(PromiseHandle h, const std::string& error);
     void          freePromise(PromiseHandle h);
 
-    // ---------------------------------------------------------------------
-    // Host data access (embedding API)
-    //
-    // setHost<T> / host<T> store and retrieve a single pointer per C++ type T.
-    // Lifetime is managed by the host; slowjs never owns or frees these.
-    // ---------------------------------------------------------------------
     template<typename T>
     void setHost(T* ptr) {
         setHostImpl(typeKey<T>(), static_cast<void*>(ptr));
@@ -58,15 +51,16 @@ public:
         return static_cast<T*>(hostImpl(typeKey<T>()));
     }
 
-    // Backward-compatible raw pointer channel (maps to a dedicated slot).
     void setHostData(void* ptr) { setHost<void>(ptr); }
     void* hostData() const { return host<void>(); }
 
     bool runFile(const std::string& path);
     bool runModuleCode(const std::string& virtualName, const std::string& code);
-    // Execute plain JS statements (global/script mode), not as an ES module.
     bool eval(const std::string& virtualName, const std::string& code);
     bool runBytecode(const uint8_t* buf, size_t bufLen);
+
+    void pumpMicrotasks();
+    bool isJobPending() const;
 
     template <typename... Args>
     bool callGlobal(const char* name, Args... args) {
@@ -78,6 +72,7 @@ public:
     }
 
     static CompileResult compile(const std::string& code, const std::string& filename);
+    CompileResult compileModuleFromSource(const std::string& code, const std::string& filename);
 
     JSContext* ctx() const;
 
@@ -90,7 +85,6 @@ private:
     bool callGlobalImpl(const char* name, size_t argc, const std::function<void(JSContext*, JSValue*)>& fillArgs);
     bool evalImpl(const std::string& virtualName, const std::string& code, int evalFlags);
 
-    // Internal helpers for type-based host storage.
     using TypeKey = const void*;
     template<typename T>
     static TypeKey typeKey() {
@@ -107,5 +101,4 @@ private:
     }
 };
 
-} // namespace slowjs
-
+} // namespace qjs

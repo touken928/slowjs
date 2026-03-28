@@ -1,51 +1,52 @@
-# QuickJS build config for slowjs (expects git submodule at third_party/quickjs)
+# Vendored QuickJS source via FetchContent (pinned rev; bump QJS_QUICKJS_REV to upgrade).
 
-set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/quickjs)
+set(QJS_QUICKJS_REV d7ae12ae71dfd6ab2997527d295014a8996fa0f9)
 
-if(NOT EXISTS ${QUICKJS_DIR}/quickjs.c)
-    message(FATAL_ERROR "QuickJS not found. Please run: git submodule update --init --recursive")
+include(FetchContent)
+FetchContent_Declare(quickjs_fc
+    GIT_REPOSITORY https://github.com/bellard/quickjs.git
+    GIT_TAG        ${QJS_QUICKJS_REV})
+message(STATUS "qjs: FetchContent QuickJS ${QJS_QUICKJS_REV}")
+FetchContent_MakeAvailable(quickjs_fc)
+
+set(QJS_QUICKJS_DIR "${quickjs_fc_SOURCE_DIR}")
+if(NOT EXISTS "${QJS_QUICKJS_DIR}/quickjs.c")
+    message(FATAL_ERROR "QuickJS missing under ${QJS_QUICKJS_DIR}")
 endif()
 
-set(QUICKJS_SOURCES
-    ${QUICKJS_DIR}/quickjs.c
-    ${QUICKJS_DIR}/quickjs-libc.c
-    ${QUICKJS_DIR}/libregexp.c
-    ${QUICKJS_DIR}/libunicode.c
-    ${QUICKJS_DIR}/cutils.c
-    ${QUICKJS_DIR}/dtoa.c
-)
+if(EXISTS "${QJS_QUICKJS_DIR}/VERSION")
+    file(READ "${QJS_QUICKJS_DIR}/VERSION" _v)
+    string(STRIP "${_v}" QJS_CONFIG_VERSION)
+else()
+    set(QJS_CONFIG_VERSION "unknown")
+endif()
 
-# Provide public include dir in build tree (copy headers; avoids Windows symlink perms)
-set(QUICKJS_INCLUDE_DIR ${CMAKE_BINARY_DIR}/quickjs_include)
-file(MAKE_DIRECTORY ${QUICKJS_INCLUDE_DIR})
+set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/quickjs_include")
+file(MAKE_DIRECTORY "${QUICKJS_INCLUDE_DIR}")
+file(COPY "${QJS_QUICKJS_DIR}/quickjs.h" "${QJS_QUICKJS_DIR}/quickjs-libc.h"
+    DESTINATION "${QUICKJS_INCLUDE_DIR}")
 
-set(QUICKJS_HEADERS
-    quickjs.h
-    quickjs-libc.h
-)
+add_library(quickjs STATIC
+    "${QJS_QUICKJS_DIR}/quickjs.c"
+    "${QJS_QUICKJS_DIR}/quickjs-libc.c"
+    "${QJS_QUICKJS_DIR}/libregexp.c"
+    "${QJS_QUICKJS_DIR}/libunicode.c"
+    "${QJS_QUICKJS_DIR}/cutils.c"
+    "${QJS_QUICKJS_DIR}/dtoa.c")
 
-foreach(header ${QUICKJS_HEADERS})
-    if(EXISTS ${QUICKJS_DIR}/${header})
-        file(COPY ${QUICKJS_DIR}/${header} DESTINATION ${QUICKJS_INCLUDE_DIR})
-    endif()
-endforeach()
-
-add_library(quickjs STATIC ${QUICKJS_SOURCES})
-
-target_include_directories(quickjs PRIVATE ${QUICKJS_DIR})
-target_include_directories(quickjs PUBLIC ${QUICKJS_INCLUDE_DIR})
-
-target_compile_definitions(quickjs PRIVATE CONFIG_VERSION="2024-01-13")
+target_include_directories(quickjs PRIVATE "${QJS_QUICKJS_DIR}")
+target_include_directories(quickjs PUBLIC "$<BUILD_INTERFACE:${QUICKJS_INCLUDE_DIR}>")
+target_compile_definitions(quickjs PRIVATE CONFIG_VERSION="${QJS_CONFIG_VERSION}")
+target_compile_options(quickjs PRIVATE -w)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_definitions(quickjs PRIVATE NDEBUG)
     target_compile_options(quickjs PRIVATE -O3 -ffunction-sections -fdata-sections)
 endif()
 
-if(WIN32)
-    if(MSVC)
-        message(FATAL_ERROR "MSVC is not supported. Please use MinGW-w64 or Clang on Windows.")
-    endif()
+if(MSVC)
+    message(FATAL_ERROR "MSVC is not supported; use MinGW-w64 or Clang on Windows.")
+elseif(WIN32)
     target_compile_definitions(quickjs PRIVATE _CRT_SECURE_NO_WARNINGS)
 elseif(UNIX)
     target_compile_definitions(quickjs PRIVATE _GNU_SOURCE)
@@ -54,10 +55,3 @@ elseif(UNIX)
         target_link_libraries(quickjs PRIVATE pthread)
     endif()
 endif()
-
-if(MSVC)
-    target_compile_options(quickjs PRIVATE /W3 /wd4244 /wd4267 /wd4996)
-else()
-    target_compile_options(quickjs PRIVATE -w)
-endif()
-

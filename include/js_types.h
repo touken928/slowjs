@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace slowjs {
+namespace qjs {
 
 template <typename T> struct JSConv;
 
@@ -133,8 +133,6 @@ struct JSConv<std::vector<T>> {
     }
 };
 
-// Non-owning wrapper for returning a raw JSValue through FuncWrap.
-// The wrapped JSValue is DupValue'd on conversion; caller retains original ownership.
 struct RawJSValue {
     JSValue val = JS_UNDEFINED;
 };
@@ -154,5 +152,4 @@ struct JSConv {
         "JSConv<T> not specialized for this type. Supported: int, int64_t, double, float, bool, std::string, std::vector<T>, RawJSValue");
 };
 
-} // namespace slowjs
-
+} // namespace qjs

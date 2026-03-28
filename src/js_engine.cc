@@ -1,10 +1,10 @@
-#include <slowjs/JSEngine.hpp>
-#include <slowjs/Plugin.hpp>
+#include <js_engine.h>
+#include <js_plugin.h>
 
 #include <fstream>
 #include <sstream>
 
-namespace slowjs {
+namespace qjs {
 
 static JSClassID g_funcClassId = 0;
 
@@ -344,6 +344,7 @@ bool JSEngine::evalImpl(const std::string& virtualName, const std::string& code,
     JSValue r = JS_Eval(impl_->ctx, code.c_str(), code.size(), virtualName.c_str(), evalFlags);
     if (JS_IsException(r)) { impl_->dumpError(); JS_FreeValue(impl_->ctx, r); return false; }
     JS_FreeValue(impl_->ctx, r);
+    executePendingJobs();
     return true;
 }
 
@@ -375,7 +376,17 @@ bool JSEngine::runBytecode(const uint8_t* buf, size_t bufLen) {
             JS_FreeValue(impl_->ctx, moduleNS);
         }
     }
+    executePendingJobs();
     return true;
+}
+
+void JSEngine::pumpMicrotasks() {
+    executePendingJobs();
+}
+
+bool JSEngine::isJobPending() const {
+    if (!impl_ || !impl_->rt) return false;
+    return JS_IsJobPending(impl_->rt) != 0;
 }
 
 bool JSEngine::callGlobalImpl(const char* name, size_t argc, const std::function<void(JSContext*, JSValue*)>& fillArgs) {
@@ -443,6 +454,43 @@ JSEngine::CompileResult JSEngine::compile(const std::string& code, const std::st
     js_free(ctx, outBuf);
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
+    return result;
+}
+
+JSEngine::CompileResult JSEngine::compileModuleFromSource(const std::string& code, const std::string& filename) {
+    CompileResult result;
+    if (!impl_ || !impl_->ctx || impl_->cleanedUp) {
+        result.error = "JSEngine not initialized";
+        return result;
+    }
+
+    installModules();
+
+    JSValue obj = JS_Eval(impl_->ctx, code.c_str(), code.size(), filename.c_str(),
+        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+
+    if (JS_IsException(obj)) {
+        JSValue ex = JS_GetException(impl_->ctx);
+        const char* msg = JS_ToCString(impl_->ctx, ex);
+        result.error = msg ? msg : "Unknown compile error";
+        if (msg) JS_FreeCString(impl_->ctx, msg);
+        JS_FreeValue(impl_->ctx, ex);
+        JS_FreeValue(impl_->ctx, obj);
+        return result;
+    }
+
+    size_t outSize = 0;
+    uint8_t* outBuf = JS_WriteObject(impl_->ctx, &outSize, obj, JS_WRITE_OBJ_BYTECODE);
+    JS_FreeValue(impl_->ctx, obj);
+
+    if (!outBuf) {
+        result.error = "Failed to serialize bytecode";
+        return result;
+    }
+
+    result.bytecode.assign(outBuf, outBuf + outSize);
+    result.success = true;
+    js_free(impl_->ctx, outBuf);
     return result;
 }
 
@@ -545,5 +593,5 @@ void JSEngine::freePromise(PromiseHandle h) {
     delete ip;
 }
 
-} // namespace slowjs
+} // namespace qjs
 
