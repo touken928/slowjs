@@ -37,6 +37,7 @@ public:
     PromiseHandle createPromise();
     RawJSValue    promiseValue(PromiseHandle h) const;
     void          resolvePromise(PromiseHandle h, const std::string& data);
+    void          resolvePromise(PromiseHandle h, int64_t n);
     void          resolvePromiseVoid(PromiseHandle h);
     void          rejectPromise(PromiseHandle h, const std::string& error);
     void          freePromise(PromiseHandle h);

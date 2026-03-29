@@ -553,6 +553,20 @@ void JSEngine::resolvePromise(PromiseHandle h, const std::string& data) {
     executePendingJobs();
 }
 
+void JSEngine::resolvePromise(PromiseHandle h, int64_t n) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    JSValue arg = JS_NewInt64(c, n);
+    JSValue r = JS_Call(c, ip->resolve, JS_UNDEFINED, 1, &arg);
+    JS_FreeValue(c, arg);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
 void JSEngine::resolvePromiseVoid(PromiseHandle h) {
     auto* ip = static_cast<InternalPromise*>(h.ptr);
     if (!ip || !impl_ || !impl_->ctx) return;
