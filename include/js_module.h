@@ -76,6 +76,25 @@ public:
         return *this;
     }
 
+    /** Callable returns a JS value (e.g. a Promise); argument count must be in [minArgc, maxArgc]. */
+    JSModule& funcDynamic(const std::string& name, int minArgc, int maxArgc,
+        std::function<JSValue(JSContext*, int, JSValue*)> fn) {
+        struct W : FuncBase {
+            int mn, mx;
+            std::function<JSValue(JSContext*, int, JSValue*)> f;
+            W(int a, int b, std::function<JSValue(JSContext*, int, JSValue*)> x)
+                : mn(a), mx(b), f(std::move(x)) {}
+            int arity() const override { return mx; }
+            JSValue call(JSContext* c, int argc, JSValue* argv) override {
+                if (argc < mn || argc > mx)
+                    return JS_ThrowTypeError(c, "expected %d to %d arguments, got %d", mn, mx, argc);
+                return f(c, argc, argv);
+            }
+        };
+        funcs_[name] = std::make_unique<W>(minArgc, maxArgc, std::move(fn));
+        return *this;
+    }
+
     template <typename Ret, typename... Args>
     JSModule& func(const std::string& name, Ret(*f)(Args...)) {
         funcs_[name] = std::make_unique<FuncWrap<Ret, Args...>>(std::function<Ret(Args...)>(f));

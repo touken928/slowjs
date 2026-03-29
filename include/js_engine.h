@@ -39,7 +39,11 @@ public:
     void          resolvePromise(PromiseHandle h, const std::string& data);
     void          resolvePromise(PromiseHandle h, int64_t n);
     void          resolvePromiseVoid(PromiseHandle h);
+    /** Steals one reference count from `value` (do not free after call). */
+    void          resolvePromiseJSValue(PromiseHandle h, JSValue value);
+    void          resolvePromiseBytes(PromiseHandle h, const uint8_t* data, size_t len);
     void          rejectPromise(PromiseHandle h, const std::string& error);
+    void          rejectPromise(PromiseHandle h, const std::string& error, const std::string& code);
     void          freePromise(PromiseHandle h);
 
     template<typename T>

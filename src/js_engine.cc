@@ -580,7 +580,45 @@ void JSEngine::resolvePromiseVoid(PromiseHandle h) {
     executePendingJobs();
 }
 
+void JSEngine::resolvePromiseJSValue(PromiseHandle h, JSValue value) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    JSValue r = JS_Call(c, ip->resolve, JS_UNDEFINED, 1, &value);
+    JS_FreeValue(c, value);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
+void JSEngine::resolvePromiseBytes(PromiseHandle h, const uint8_t* data, size_t len) {
+    auto* ip = static_cast<InternalPromise*>(h.ptr);
+    if (!ip || !impl_ || !impl_->ctx) return;
+    JSContext* c = impl_->ctx;
+
+    static const uint8_t empty_buf{};
+    const uint8_t* src = (len == 0) ? &empty_buf : data;
+
+    JSValue ab = JS_NewArrayBufferCopy(c, src, len);
+    if (JS_IsException(ab)) {
+        impl_->dumpError();
+        return;
+    }
+    JSValue r = JS_Call(c, ip->resolve, JS_UNDEFINED, 1, &ab);
+    JS_FreeValue(c, ab);
+    if (JS_IsException(r)) impl_->dumpError();
+    JS_FreeValue(c, r);
+
+    executePendingJobs();
+}
+
 void JSEngine::rejectPromise(PromiseHandle h, const std::string& error) {
+    rejectPromise(h, error, std::string{});
+}
+
+void JSEngine::rejectPromise(PromiseHandle h, const std::string& error, const std::string& code) {
     auto* ip = static_cast<InternalPromise*>(h.ptr);
     if (!ip || !impl_ || !impl_->ctx) return;
     JSContext* c = impl_->ctx;
@@ -588,6 +626,9 @@ void JSEngine::rejectPromise(PromiseHandle h, const std::string& error) {
     JSValue errObj = JS_NewError(c);
     JS_DefinePropertyValueStr(c, errObj, "message",
         JS_NewString(c, error.c_str()), JS_PROP_C_W_E);
+    if (!code.empty())
+        JS_DefinePropertyValueStr(c, errObj, "code",
+            JS_NewString(c, code.c_str()), JS_PROP_C_W_E);
     JSValue r = JS_Call(c, ip->reject, JS_UNDEFINED, 1, &errObj);
     JS_FreeValue(c, errObj);
     if (JS_IsException(r)) impl_->dumpError();
