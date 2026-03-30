@@ -1,0 +1,13 @@
+Apache License, Version 2.0
+
+The CMake build files, public headers, and C++ wrapper sources in this
+directory that are tracked in this repository are licensed under the
+Apache License, Version 2.0. The full license text is in the repository
+root:
+
+  ../../LICENSE
+
+The QuickJS engine implementation is not vendored here by default; it is
+fetched at build time from https://github.com/bellard/quickjs and is
+subject to that project’s license (MIT). See the upstream repository for
+the exact terms.
