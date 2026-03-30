@@ -135,3 +135,11 @@ ctest --test-dir build
 
 - **qjs（本封装）**：[github.com/touken928/qjs](https://github.com/touken928/qjs) — 可与本目录作为子模块或独立克隆对应。
 - **QuickJS（底层引擎）**：[github.com/bellard/quickjs](https://github.com/bellard/quickjs)
+
+---
+
+## 许可证
+
+本仓库中由维护者持有的 **CMake / C++ 封装与头文件** 以 [**Apache License 2.0**](https://www.apache.org/licenses/LICENSE-2.0.txt) 发布，**完整许可证全文**见根目录 [`LICENSE`](LICENSE)；版权与第三方说明见 [`NOTICE`](NOTICE)。
+
+通过 FetchContent 获取的 **QuickJS 引擎源码** 遵循 [bellard/quickjs](https://github.com/bellard/quickjs) 的许可（MIT），不以本仓库的 Apache-2.0 替代。
