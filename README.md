@@ -1,23 +1,36 @@
-# qjs
+<h1 align="center">qjs</h1>
 
-基于 [QuickJS](https://github.com/bellard/quickjs) 的 **C++17** 封装：引擎 **`qjs::JSEngine`**、模块树 **`qjs::JSModule`**、ES 模块与字节码、插件 **`qjs::PluginRegistry`**。头文件在 **`include/`**，命名空间 **`qjs::`**。
+<p align="center">
+  <strong>Lightweight C++17 bindings for <a href="https://github.com/bellard/quickjs">QuickJS</a>: <code>qjs::JSEngine</code>, module tree, ES modules &amp; bytecode, and <code>qjs::PluginRegistry</code> — headers under <code>include/</code>, namespace <code>qjs::</code>.</strong>
+</p>
 
-主要头文件：**`js_engine.h`**、**`js_module.h`**、**`js_plugin.h`**、**`js_types.h`**。
+<p align="center">
+  <a href="https://en.cppreference.com/w/cpp/17"><img src="https://img.shields.io/badge/c++-17-blue.svg?style=for-the-badge&logo=c%2B%2B" alt="C++17"></a>
+  <a href="https://cmake.org/"><img src="https://img.shields.io/badge/cmake-3.16+-064F8C.svg?style=for-the-badge&logo=cmake" alt="CMake 3.16+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge" alt="License: Apache 2.0"></a>
+  <a href="https://github.com/touken928/qjs/stargazers"><img src="https://img.shields.io/github/stars/touken928/qjs?style=for-the-badge&color=yellow&logo=github" alt="GitHub stars"></a>
+</p>
+
+<p align="center">
+  <a href="README_zh.md">简体中文</a>
+</p>
 
 ---
 
-## CMake：把 `qjs` 链进工程
+Main headers: **`js_engine.h`**, **`js_module.h`**, **`js_plugin.h`**, **`js_types.h`**.
 
-用 **`add_subdirectory`**（子模块、拷贝进 `third_party` 等）：
+## CMake: link `qjs` into your project
+
+With **`add_subdirectory`** (submodule, vendor copy, etc.):
 
 ```cmake
-add_subdirectory(third_party/qjs)   # 路径按你的仓库调整
+add_subdirectory(third_party/qjs)   # adjust path
 
 add_executable(myapp main.cc)
 target_link_libraries(myapp PRIVATE qjs::qjs)
 ```
 
-或用 **`FetchContent`**（声明里换成你的 URL / 路径与 tag）：
+Or **`FetchContent`**:
 
 ```cmake
 include(FetchContent)
@@ -30,13 +43,13 @@ add_executable(myapp main.cc)
 target_link_libraries(myapp PRIVATE qjs::qjs)
 ```
 
-链接 **`qjs::qjs`** 会带上 **`include/`**，并 **PUBLIC** 传递 **`quickjs`**。QuickJS 由 **`cmake/qjs_quickjs.cmake`** 中 **`QJS_QUICKJS_REV`** 经 FetchContent 获取（首次配置需能访问 GitHub）。
+Linking **`qjs::qjs`** pulls in **`include/`** and **PUBLIC**-ly propagates **`quickjs`**. The QuickJS engine is fetched via **`cmake/qjs_quickjs.cmake`** using **`QJS_QUICKJS_REV`** (requires network access to GitHub on first configure).
 
 ---
 
-## 代码示例
+## Examples
 
-### 1. 引擎生命周期 + 执行 ES 模块
+### 1. Engine lifecycle + run an ES module
 
 ```cpp
 #include <js_engine.h>
@@ -55,9 +68,9 @@ export const msg = "hello";
 }
 ```
 
-### 2. 在根模块上注册 C++ 函数，再给 JS 用
+### 2. Register C++ functions on the root module, then `import` from JS
 
-先挂函数，再 **`installModules()`**，最后 **`runModuleCode`** 里 `import` 该模块：
+Register functions, call **`installModules()`**, then use them inside **`runModuleCode`**:
 
 ```cpp
 #include <js_engine.h>
@@ -81,7 +94,7 @@ export const sum = add(40, 2);
 }
 ```
 
-### 3. 插件：实现 `IEnginePlugin`，统一 `install`
+### 3. Plugins: implement `IEnginePlugin` and `install`
 
 ```cpp
 #include <js_engine.h>
@@ -116,9 +129,9 @@ export const out = label;
 
 ---
 
-## 单独编译 / 跑本库测试
+## Build & tests (standalone)
 
-在 **`qjs` 仓库根目录**（本目录）建构建目录，勿放在上层工程根下：
+From a **clone of this repo** (do not nest the build directory under an unrelated parent’s build tree):
 
 ```bash
 git clone https://github.com/touken928/qjs.git
@@ -128,32 +141,30 @@ cmake --build build -j
 ctest --test-dir build
 ```
 
-此处 **`cmake` 以本目录为顶层工程**，选项 **`QJS_BUILD_TESTS`** 默认为 **`ON`**，会构建 **`qjs_tests`** 并拉取 GoogleTest（若工程里尚未提供 **`GTest::gtest_main`**）。把 **`qjs` 嵌进别的工程时**，该选项默认为 **`OFF`**。
+When this project is the **top-level** CMake project, **`QJS_BUILD_TESTS`** defaults to **`ON`** (builds **`qjs_tests`** and fetches GoogleTest if **`GTest::gtest_main`** is not already available). When **`qjs`** is embedded via **`add_subdirectory`**, it defaults to **`OFF`**.
 
-升级 QuickJS：改缓存变量 **`QJS_QUICKJS_REV`**（定义在 **`cmake/qjs_quickjs.cmake`**），或在配置时传入 `-DQJS_QUICKJS_REV=...`。
+To bump QuickJS: set cache variable **`QJS_QUICKJS_REV`** (see **`cmake/qjs_quickjs.cmake`**) or pass **`-DQJS_QUICKJS_REV=...`** at configure time.
 
-### CMake 目标（导入方式）
+### CMake targets
 
-本仓库以 **target** 为边界：`add_subdirectory(…/qjs)` 或 **`FetchContent`** 拉取本仓库后，链接：
-
-| Target | 说明 |
+| Target | Role |
 |--------|------|
-| **`quickjs`** / **`qjs::quickjs`** | QuickJS 引擎静态库（FetchContent 源码 + 生成头目录） |
-| **`qjs`** / **`qjs::qjs`** | C++ 封装 `qjs::JSEngine` 等，**PUBLIC** 依赖 `quickjs` |
+| **`quickjs`** / **`qjs::quickjs`** | QuickJS engine static library (fetched sources + generated headers) |
+| **`qjs`** / **`qjs::qjs`** | C++ wrapper (`qjs::JSEngine`, etc.), **PUBLIC** depends on **`quickjs`** |
 
-子工程只需 **`target_link_libraries(your_target PRIVATE qjs::qjs)`**，包含目录与 `quickjs` 依赖由 **INTERFACE/PUBLIC** 传递，无需全局 `include_directories`。
+Downstream projects only need **`target_link_libraries(your_target PRIVATE qjs::qjs)`**; include paths and **`quickjs`** propagate via **PUBLIC** / **INTERFACE** — no global **`include_directories`**.
 
-可选测试：顶层 **`QJS_BUILD_TESTS=ON`** 时包含 **`cmake/qjs_tests.cmake`**，生成可执行文件 **`qjs_tests`**。
+Optional tests: with **`QJS_BUILD_TESTS=ON`** at the top level, **`cmake/qjs_tests.cmake`** adds the **`qjs_tests`** executable.
 
-## 仓库与依赖
+## Repositories
 
-- **qjs（本封装）**：[github.com/touken928/qjs](https://github.com/touken928/qjs) — 可与本目录作为子模块或独立克隆对应。
-- **QuickJS（底层引擎）**：[github.com/bellard/quickjs](https://github.com/bellard/quickjs)
+- **This wrapper** — [github.com/touken928/qjs](https://github.com/touken928/qjs) (submodule or standalone clone).
+- **QuickJS engine** — [github.com/bellard/quickjs](https://github.com/bellard/quickjs)
 
 ---
 
-## 许可证
+## License
 
-本仓库中由维护者持有的 **CMake / C++ 封装与头文件** 以 [**Apache License 2.0**](https://www.apache.org/licenses/LICENSE-2.0.txt) 发布，**完整许可证全文**见根目录 [`LICENSE`](LICENSE)。
+The **CMake scripts, C++ bindings, and headers** maintained in this repository are released under the [**Apache License 2.0**](https://www.apache.org/licenses/LICENSE-2.0.txt). The full text is in [`LICENSE`](LICENSE).
 
-通过 FetchContent 获取的 **QuickJS 引擎源码** 遵循 [bellard/quickjs](https://github.com/bellard/quickjs) 的许可（MIT），不以本仓库对封装代码的 Apache-2.0 授权替代上游对引擎本身的条款。
+QuickJS engine sources fetched at build time are governed by [bellard/quickjs](https://github.com/bellard/quickjs) (MIT). That upstream license applies to the engine; it is not replaced by the Apache-2.0 terms for this wrapper.
