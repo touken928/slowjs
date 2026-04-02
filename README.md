@@ -121,7 +121,8 @@ export const out = label;
 在 **`qjs` 仓库根目录**（本目录）建构建目录，勿放在上层工程根下：
 
 ```bash
-cd third_party/qjs   # 或独立克隆的 qjs 根目录
+git clone https://github.com/touken928/qjs.git
+cd qjs
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ctest --test-dir build
@@ -153,6 +154,6 @@ ctest --test-dir build
 
 ## 许可证
 
-本仓库中由维护者持有的 **CMake / C++ 封装与头文件** 以 [**Apache License 2.0**](https://www.apache.org/licenses/LICENSE-2.0.txt) 发布，**完整许可证全文**见根目录 [`LICENSE`](LICENSE)；版权与第三方说明见 [`NOTICE`](NOTICE)。
+本仓库中由维护者持有的 **CMake / C++ 封装与头文件** 以 [**Apache License 2.0**](https://www.apache.org/licenses/LICENSE-2.0.txt) 发布，**完整许可证全文**见根目录 [`LICENSE`](LICENSE)。
 
-通过 FetchContent 获取的 **QuickJS 引擎源码** 遵循 [bellard/quickjs](https://github.com/bellard/quickjs) 的许可（MIT），不以本仓库的 Apache-2.0 替代。
+通过 FetchContent 获取的 **QuickJS 引擎源码** 遵循 [bellard/quickjs](https://github.com/bellard/quickjs) 的许可（MIT），不以本仓库对封装代码的 Apache-2.0 授权替代上游对引擎本身的条款。
