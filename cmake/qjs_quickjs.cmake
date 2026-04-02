@@ -1,6 +1,10 @@
-# Vendored QuickJS source via FetchContent (pinned rev; bump QJS_QUICKJS_REV to upgrade).
+# QuickJS engine: FetchContent + static target `quickjs`.
+# Intended to be included once from this project's CMakeLists.txt (see include_guard).
 
-set(QJS_QUICKJS_REV d7ae12ae71dfd6ab2997527d295014a8996fa0f9)
+include_guard(GLOBAL)
+
+set(QJS_QUICKJS_REV "d7ae12ae71dfd6ab2997527d295014a8996fa0f9"
+    CACHE STRING "Git revision (tag or commit) for bellard/quickjs FetchContent")
 
 include(FetchContent)
 FetchContent_Declare(quickjs_fc
@@ -21,10 +25,11 @@ else()
     set(QJS_CONFIG_VERSION "unknown")
 endif()
 
-set(QUICKJS_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/quickjs_include")
-file(MAKE_DIRECTORY "${QUICKJS_INCLUDE_DIR}")
+# Generated headers live under this subproject's binary dir (stable when used via add_subdirectory).
+set(QJS_QUICKJS_PUBLIC_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/qjs_quickjs_include")
+file(MAKE_DIRECTORY "${QJS_QUICKJS_PUBLIC_INCLUDE_DIR}")
 file(COPY "${QJS_QUICKJS_DIR}/quickjs.h" "${QJS_QUICKJS_DIR}/quickjs-libc.h"
-    DESTINATION "${QUICKJS_INCLUDE_DIR}")
+    DESTINATION "${QJS_QUICKJS_PUBLIC_INCLUDE_DIR}")
 
 add_library(quickjs STATIC
     "${QJS_QUICKJS_DIR}/quickjs.c"
@@ -35,7 +40,7 @@ add_library(quickjs STATIC
     "${QJS_QUICKJS_DIR}/dtoa.c")
 
 target_include_directories(quickjs PRIVATE "${QJS_QUICKJS_DIR}")
-target_include_directories(quickjs PUBLIC "$<BUILD_INTERFACE:${QUICKJS_INCLUDE_DIR}>")
+target_include_directories(quickjs PUBLIC "$<BUILD_INTERFACE:${QJS_QUICKJS_PUBLIC_INCLUDE_DIR}>")
 target_compile_definitions(quickjs PRIVATE CONFIG_VERSION="${QJS_CONFIG_VERSION}")
 target_compile_options(quickjs PRIVATE -w)
 

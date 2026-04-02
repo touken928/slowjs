@@ -1,4 +1,6 @@
-# qjs_tests — uses existing GTest::gtest_main if present, else FetchContent v1.14.0.
+# Unit test executable `qjs_tests` (optional). Requires QJS_BUILD_TESTS=ON.
+
+include_guard(GLOBAL)
 
 if(NOT TARGET GTest::gtest_main)
     include(FetchContent)

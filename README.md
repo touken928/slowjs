@@ -30,7 +30,7 @@ add_executable(myapp main.cc)
 target_link_libraries(myapp PRIVATE qjs::qjs)
 ```
 
-链接 **`qjs::qjs`** 会带上 **`include/`**。QuickJS 由 **`cmake/quickjs.cmake`** 里 **`QJS_QUICKJS_REV`** 经 FetchContent 获取（首次配置需能访问 GitHub）。
+链接 **`qjs::qjs`** 会带上 **`include/`**，并 **PUBLIC** 传递 **`quickjs`**。QuickJS 由 **`cmake/qjs_quickjs.cmake`** 中 **`QJS_QUICKJS_REV`** 经 FetchContent 获取（首次配置需能访问 GitHub）。
 
 ---
 
@@ -129,7 +129,20 @@ ctest --test-dir build
 
 此处 **`cmake` 以本目录为顶层工程**，选项 **`QJS_BUILD_TESTS`** 默认为 **`ON`**，会构建 **`qjs_tests`** 并拉取 GoogleTest（若工程里尚未提供 **`GTest::gtest_main`**）。把 **`qjs` 嵌进别的工程时**，该选项默认为 **`OFF`**。
 
-升级 QuickJS：改 **`cmake/quickjs.cmake`** 中的 **`QJS_QUICKJS_REV`**。
+升级 QuickJS：改缓存变量 **`QJS_QUICKJS_REV`**（定义在 **`cmake/qjs_quickjs.cmake`**），或在配置时传入 `-DQJS_QUICKJS_REV=...`。
+
+### CMake 目标（导入方式）
+
+本仓库以 **target** 为边界：`add_subdirectory(…/qjs)` 或 **`FetchContent`** 拉取本仓库后，链接：
+
+| Target | 说明 |
+|--------|------|
+| **`quickjs`** / **`qjs::quickjs`** | QuickJS 引擎静态库（FetchContent 源码 + 生成头目录） |
+| **`qjs`** / **`qjs::qjs`** | C++ 封装 `qjs::JSEngine` 等，**PUBLIC** 依赖 `quickjs` |
+
+子工程只需 **`target_link_libraries(your_target PRIVATE qjs::qjs)`**，包含目录与 `quickjs` 依赖由 **INTERFACE/PUBLIC** 传递，无需全局 `include_directories`。
+
+可选测试：顶层 **`QJS_BUILD_TESTS=ON`** 时包含 **`cmake/qjs_tests.cmake`**，生成可执行文件 **`qjs_tests`**。
 
 ## 仓库与依赖
 
